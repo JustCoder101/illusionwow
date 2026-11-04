@@ -1,0 +1,37 @@
+name: Build Pygame APK
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: # Позволяет запускать сборку вручную
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Скачиваем репозиторий
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # 2. Настраиваем кэширование зависимостей Buildozer (ускоряет последующие сборки)
+    - name: Cache Buildozer global directory
+      uses: actions/cache@v4
+      with:
+        path: .buildozer
+        key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+
+    # 3. Запускаем сборку с помощью Docker-контейнера Buildozer
+    - name: Build APK with Buildozer
+      uses: ArtemisAlpha/Buildozer-Action@v1
+      with:
+        command: buildozer android debug
+        repository_root: .
+
+    # 4. Сохраняем готовый APK-файл в артефакты GitHub
+    - name: Upload APK artifact
+      uses: actions/artifacts@v4
+      with:
+        name: pygame-debug-apk
+        path: bin/*.apk
+        
