@@ -3,39 +3,30 @@ name: Build Pygame APK
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch: # Позволяет запускать сборку вручную
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch: # Позволяет запускать сборку вручную кнопкой в интерфейсе GitHub
 
 jobs:
   build:
+    name: Build Android APK
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Скачиваем репозиторий
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2. Настраиваем кэширование глобальной директории Buildozer
-    # ИСПРАВЛЕНО: изменен путь с .buildozer_global на .buildozer-global
-    - name: Cache Buildozer global directory
-      uses: actions/cache@v4
-      with:
-        path: .buildozer-global
-        key: ${{ runner.os }}-buildozer-global-${{ hashFiles('buildozer.spec') }}
-        restore-keys: |
-          ${{ runner.os }}-buildozer-global-
-
-    # 3. Запускаем сборку с помощью правильного экшена
+    # Автоматическая сборка через Buildozer с кэшированием SDK/NDK
     - name: Build APK with Buildozer
-      uses: ArtemSBulgakov/buildozer-action@v1
       id: buildozer
+      uses: ArtemSBulgakov/buildozer-action@v1
       with:
         command: buildozer android debug
         repository_root: .
-        workdir: .
 
-    # 4. Сохраняем готовый APK-файл в артефакты GitHub
-    - name: Upload APK artifact
+    # Загрузка готового APK в артефакты сборки GitHub
+    - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: pygame-debug-apk
+        name: pygame-game-apk
         path: ${{ steps.buildozer.outputs.filename }}
