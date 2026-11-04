@@ -15,11 +15,11 @@ jobs:
       uses: actions/checkout@v4
 
     # 2. Настраиваем кэширование глобальной директории Buildozer
-    # Автор экшена рекомендует кэшировать именно `.buildozer_global` (где хранятся Android SDK/NDK)
+    # ИСПРАВЛЕНО: изменен путь с .buildozer_global на .buildozer-global
     - name: Cache Buildozer global directory
       uses: actions/cache@v4
       with:
-        path: .buildozer_global
+        path: .buildozer-global
         key: ${{ runner.os }}-buildozer-global-${{ hashFiles('buildozer.spec') }}
         restore-keys: |
           ${{ runner.os }}-buildozer-global-
@@ -34,10 +34,8 @@ jobs:
         workdir: .
 
     # 4. Сохраняем готовый APK-файл в артефакты GitHub
-    # Используем динамический путь из выходных данных (outputs) экшена
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
         name: pygame-debug-apk
         path: ${{ steps.buildozer.outputs.filename }}
-        
