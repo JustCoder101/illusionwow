@@ -5,28 +5,47 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-  workflow_dispatch: # Позволяет запускать сборку вручную кнопкой в интерфейсе GitHub
+  workflow_dispatch:
 
 jobs:
   build:
     name: Build Android APK
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # Автоматическая сборка через Buildozer с кэшированием SDK/NDK
-    - name: Build APK with Buildozer
-      id: buildozer
-      uses: ArtemSBulgakov/buildozer-action@v1
-      with:
-        command: buildozer android debug
-        repository_root: .
+    # 1. Инициализируем современный Docker Buildx, чтобы не было ошибок OCI-манифестов
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-    # Загрузка готового APK в артефакты сборки GitHub
+    # 2. Кэшируем папки Buildozer (ускорит повторные сборки на ~15 минут)
+    - name: Cache Buildozer global directory
+      uses: actions/cache@v4
+      with:
+        path: .buildozer-global
+        key: buildozer-global-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+
+    - name: Cache Buildozer local directory
+      uses: actions/cache@v4
+      with:
+        path: .buildozer
+        key: buildozer-local-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+
+    # 3. Запускаем сборку напрямую через официальный Docker-контейнер Kivy
+    - name: Build APK with Buildozer Docker
+      run: |
+        mkdir -p .buildozer-global
+        docker run --rm \
+          -v ${{ github.workspace }}:/home/user/hostcwd \
+          -v ${{ github.workspace }}/.buildozer-global:/home/user/.buildozer \
+          ghcr.io/kivy/buildozer:latest \
+          android debug
+
+    # 4. Сохраняем полученный APK-файл в артефакты
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: pygame-game-apk
-        path: ${{ steps.buildozer.outputs.filename }}
+        path: bin/*.apk
